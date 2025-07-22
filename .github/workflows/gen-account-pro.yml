@@ -15,8 +15,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: bash-version
-        run: echo "::add-mask::${{ github.event.client_payload.hwid }}"
+      - name: add-mask
+        run: |
+          echo "::add-mask::${{ github.event.client_payload.order_sn }}"
+          echo "::add-mask::${{ github.event.client_payload.hwid }}"
 
       - uses: ztzzxyz/dotnet-reactor-run-action@licensemgr
         with:
@@ -41,7 +43,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.client_payload.order_sn }}
+          name: ${{ github.event.event_type }}
           path: hb.license
 
       - name: Delete workflow runs
