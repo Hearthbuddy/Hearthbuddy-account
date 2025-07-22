@@ -43,7 +43,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.event_type }}
+          name: license
           path: hb.license
 
       - name: Delete workflow runs
