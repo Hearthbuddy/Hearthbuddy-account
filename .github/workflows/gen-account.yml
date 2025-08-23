@@ -1,0 +1,62 @@
+name: Gen Account By Gitee Compent
+
+concurrency:
+  group: create-account
+
+on:
+  issue_comment:
+    types: [created, edited]
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Create Account
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          REPO_OWNER=$(echo "$COMMENT_BODY" | awk 'NR==1')
+          REPO_NAME=$(echo "$COMMENT_BODY" | awk 'NR==2')
+          ISSUE_NUMBER=$(echo "$COMMENT_BODY" | awk 'NR==3')
+          HARDWARDID=$(echo "$COMMENT_BODY" | awk 'NR==4')
+
+          echo "REPO_OWNER: $REPO_OWNER"
+          echo "REPO_NAME: $REPO_NAME"
+          echo "ISSUE_NUMBER: $ISSUE_NUMBER"
+          echo "HARDWARDID: $HARDWARDID"
+
+          python gen_license.py "$REPO_OWNER" "$REPO_NAME" "$ISSUE_NUMBER" "$HARDWARDID"
+      - name: Commit files
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          HARDWARDID=$(echo "$COMMENT_BODY" | awk 'NR==4')
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          if [[ -n $(git status --porcelain) ]]; then
+              git add . && git commit -m "Add key $HARDWARDID"
+          fi
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 3
+          keep_minimum_runs: 3
