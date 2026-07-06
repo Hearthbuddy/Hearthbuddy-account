@@ -1,0 +1,53 @@
+name: Gen Account Pro
+
+concurrency:
+  group: create-account-pro
+
+on:
+  repository_dispatch:
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: self-hosted
+
+    steps:
+      - name: add-mask
+        run: |
+          echo "::add-mask::${{ github.event.client_payload.order_sn }}"
+          echo "::add-mask::${{ github.event.client_payload.hwid }}"
+
+      - uses: ztzzxyz/dotnet-reactor-run-action@licensemgr
+        with:
+          master_key: ${{ secrets.REACTOR_MKEY }}
+          license_days: ${{ github.event.client_payload.validity_days }}
+          hardware_id: ${{ github.event.client_payload.hwid }}
+          output_path: ${{ github.workspace }}
+
+      - name: Send mail
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{secrets.MAIL_USERNAME}}
+          password: ${{secrets.MAIL_PASSWORD}}
+          subject: ${{ github.event.client_payload.order_sn }}
+          to: ${{ github.event.client_payload.email }}
+          from: ztzz.xyz@gmail.com
+          body: Please receive your key
+          attachments: hb.license
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: license
+          path: hb.license
+
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 30
+          keep_minimum_runs: 100
